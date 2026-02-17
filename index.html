@@ -3,48 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIZ-STRATEGIST Executive Master</title>
-    <!-- Tailwind CSS -->
+    <title>BIZ-STRATEGIST Executive Mastery v10</title>
+    <!-- Bibliotecas externas -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Libraries -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide-react"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; margin: 0; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
+        .tab-content { animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
-        const { 
-            TrendingUp, Users, Settings, Package, BarChart3, DollarSign, 
-            PieChart, Activity, Plus, Trash2, ChevronLeft, Menu, 
-            Calculator, Briefcase, Save, Zap, Target, ArrowUpRight,
-            ShieldCheck, Percent, Layers, Gauge, Thermometer, Landmark, 
-            FileText, ReceiptText, Wallet, Info, Clock, ShoppingCart, 
-            Lightbulb, Megaphone, Boxes, Scale, HelpCircle, ArrowRightLeft,
-            CheckCircle2, AlertTriangle, Loader2 
-        } = lucide-react;
+    <!-- SDK FIREBASE (Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const {
-            LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
-            Legend, ResponsiveContainer, AreaChart, Area, Cell, Pie,
-            Radar, RadarChart, PolarGrid, PolarAngleAxis, BarChart: BChart, Bar
-        } = Recharts;
-
-        // --- FIREBASE PLACEHOLDER (Vincular con tus llaves aquí) ---
-        // Al usar este archivo en tu propio hosting, puedes inicializar tu Firebase aquí.
+        // CONFIGURACIÓN DE FIREBASE (COMPLETAR AQUÍ)
         const firebaseConfig = {
             apiKey: "",
             authDomain: "",
@@ -54,32 +42,54 @@
             appId: ""
         };
 
-        // --- UTILIDADES ---
-        const safe = (val, fallback = 0) => {
-            const n = parseFloat(val);
-            return isNaN(n) || !isFinite(n) ? fallback : n;
+        const app = initializeApp(firebaseConfig);
+        window.fb = {
+            auth: getAuth(app),
+            db: getFirestore(app),
+            methods: { doc, setDoc, getDoc, signInAnonymously, onAuthStateChanged }
+        };
+    </script>
+
+    <!-- CÓDIGO DE LA APLICACIÓN -->
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        
+        // --- MOTOR DE ICONOS ---
+        const Icon = ({ name, size = 18, className = "" }) => {
+            const LucideIcon = lucide[name] || lucide.HelpCircle;
+            return <LucideIcon size={size} className={className} />;
         };
 
-        const formatUSD = (val) => new Intl.NumberFormat('en-US', { 
-            style: 'currency', currency: 'USD', maximumFractionDigits: 0 
-        }).format(val);
+        const {
+            LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
+            Legend, ResponsiveContainer, AreaChart, Area, Radar, RadarChart, 
+            PolarGrid, PolarAngleAxis, BarChart, Bar, ComposedChart, Cell
+        } = Recharts;
 
-        const InfoTooltip = ({ text }) => (
-            <div className="group relative inline-block ml-1 align-middle">
-                <HelpCircle size={14} className="text-indigo-400/50 hover:text-indigo-400 cursor-help transition-all" />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 p-3 bg-slate-800 text-white text-[11px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl border border-slate-700 leading-relaxed font-medium">
+        // --- HELPERS FINANCIEROS ---
+        const safe = (v, fb = 0) => {
+            const n = parseFloat(v);
+            return isNaN(n) || !isFinite(n) ? fb : n;
+        };
+
+        const fmt = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v);
+
+        const Info = ({ text }) => (
+            <div className="group relative inline-block ml-1">
+                <Icon name="HelpCircle" size={14} className="text-indigo-500/50 hover:text-indigo-400 cursor-help" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl border border-slate-700 leading-relaxed">
                     {text}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800"></div>
                 </div>
             </div>
         );
 
-        // --- MOTOR FINANCIERO ---
-        const runFinancialEngine = (p) => {
+        // --- MOTOR DE PROYECCIÓN EJECUTIVA ---
+        const runEngine = (p) => {
             const months = [];
-            const sMult = p.scenario === 'optimistic' ? 1.25 : p.scenario === 'pessimistic' ? 0.75 : 1;
+            const scenarioMult = p.scenario === 'optimistic' ? 1.25 : p.scenario === 'pessimistic' ? 0.75 : 1;
             const mDepr = p.assets.reduce((a, b) => a + (safe(b.value) / (safe(b.life || 1) * 12)), 0);
-            const mFixedBase = p.fixedCosts.reduce((a, b) => a + safe(b.amount), 0);
+            const fixedBase = p.fixedCosts.reduce((a, b) => a + safe(b.amount), 0);
             
             const avgCost = p.products.length > 0 ? p.products.reduce((acc, x) => acc + safe(x.cost), 0) / p.products.length : 0;
             const avgMargin = p.products.length > 0 ? p.products.reduce((acc, x) => acc + safe(x.margin), 0) / p.products.length : 0;
@@ -89,71 +99,83 @@
             let equity = safe(p.investment) - safe(p.loanAmount);
             let cumCash = -equity;
             let loanBal = safe(p.loanAmount);
+            let retainedEarnings = 0;
             let accDepr = 0;
-            let revHist = Array(15).fill(0);
+            let revHistory = Array(15).fill(0);
             let payback = null;
 
             for (let i = 1; i <= 12; i++) {
                 const inf = Math.pow(1 + (safe(p.inflationRate)/100), i);
                 const season = p.seasonality[i-1] || 1;
-                const mUnits = units * season * sMult;
+                const mUnits = units * season * scenarioMult;
+                
                 const price = avgPrice * inf;
                 const costU = avgCost * inf;
                 const rev = mUnits * price;
                 const cogs = mUnits * costU;
+
                 const iibb = rev * (safe(p.iibbRate)/100);
                 const fees = rev * (safe(p.gatewayFee)/100);
                 const mkt = (mUnits * (safe(p.salesGrowth)/100)) * safe(p.cacCost) * inf;
-                const mFixed = mFixedBase * inf;
+                const mFixed = fixedBase * inf;
 
                 const cStaff = p.staff.reduce((acc, s) => {
                     const base = (safe(s.basic) + safe(s.additional)) * inf;
-                    const patr = safe(s.employerTaxesRate) / 100;
+                    const tax = safe(s.employerTaxesRate) / 100;
                     const sac = (i === 6 || i === 12) ? (base * 0.5) : 0;
-                    return acc + (base + sac) * (1 + patr);
+                    return acc + (base + sac) * (1 + tax);
                 }, 0);
 
                 const ebitda = rev - cogs - cStaff - mFixed - iibb - fees - mkt;
                 const mInt = loanBal * (safe(p.loanRate)/100/12);
                 const capRepay = (i <= safe(p.loanTerm)) ? (safe(p.loanAmount)/safe(p.loanTerm)) : 0;
                 loanBal = Math.max(0, loanBal - capRepay);
+
                 const ebt = ebitda - mDepr - mInt;
-                const tax = ebt > 0 ? ebt * (safe(p.taxRate)/100) : 0;
-                const net = ebt - tax;
+                const taxProfit = ebt > 0 ? ebt * (safe(p.taxRate)/100) : 0;
+                const net = ebt - taxProfit;
 
-                revHist[i] = rev;
-                const collected = safe(p.collectionDays) >= 30 ? (revHist[i-1] || 0) : rev;
-                const nextUnits = units * (1 + (safe(p.salesGrowth)/100)) * (p.seasonality[i] || 1) * sMult;
-                const targetInv = nextUnits * costU * safe(p.safetyStockMonths);
-                const currInv = mUnits * costU * safe(p.safetyStockMonths);
-                const stockInv = targetInv - currInv;
+                revHistory[i] = rev;
+                const cashIn = safe(p.collectionDays) >= 30 ? (revHistory[i-1] || 0) : rev;
+                const nextUnits = units * (1 + (safe(p.salesGrowth)/100)) * (p.seasonality[i] || 1) * scenarioMultiplier;
+                const stockInv = (nextUnits * costU * safe(p.safetyStockMonths)) - (mUnits * costU * safe(p.safetyStockMonths));
 
-                const cf = net + mDepr - capRepay - stockInv - (rev - collected);
+                const cf = net + mDepr - capRepay - stockInv - (rev - cashIn);
                 cumCash += cf;
                 accDepr += mDepr;
+                retainedEarnings += net;
                 if (cumCash >= 0 && payback === null) payback = i;
 
-                months.push({ m: `M${i}`, rev, ebitda, net, cf, cumCash, debtService: mInt + capRepay });
+                months.push({ 
+                    m: `M${i}`, rev, ebitda, net, cf, cumCash, 
+                    debt: loanBal, equity: equity + retainedEarnings,
+                    assets: { cash: cumCash, inv: mUnits * costU * safe(p.safetyStockMonths), fixed: safe(p.investment) - accDepr },
+                    debtSrv: mInt + capRepay
+                });
                 units *= (1 + (safe(p.salesGrowth) / 100));
             }
 
+            const terminal = (months[11]?.cf || 0) * 15; // Valor terminal a 15 meses
+
             return {
-                months,
-                van: months[11]?.cumCash || 0,
-                avgPrice, avgCost,
+                months, van: months[11]?.cumCash + terminal, 
+                avgPrice, avgCost, payback, equity, terminal,
                 totalEbitda: months.reduce((a,b)=>a+b.ebitda, 0),
                 totalRev: months.reduce((a,b)=>a+b.rev, 0),
-                mFixedTotal: mFixedBase + (p.staff.reduce((acc, s) => acc + (safe(s.basic)+safe(s.additional))*(1+safe(s.employerTaxesRate)/100), 0)),
-                payback, equity
+                mFixedTotal: fixedBase + (p.staff.reduce((acc, s) => acc + (safe(s.basic)+safe(s.additional))*(1+safe(s.employerTaxesRate)/100), 0))
             };
         };
 
+        // --- COMPONENTE PRINCIPAL ---
         function App() {
             const [activeTab, setActiveTab] = useState('config');
             const [isSidebarOpen, setIsSidebarOpen] = useState(true);
             const [scenario, setScenario] = useState('base');
+            const [user, setUser] = useState(null);
+            const [saveStatus, setSaveStatus] = useState('');
+            const [loading, setLoading] = useState(true);
 
-            // --- ESTADOS ---
+            // Estados de Datos
             const [investment, setInvestment] = useState(0);
             const [discountRate, setDiscountRate] = useState(15);
             const [inflationRate, setInflationRate] = useState(0);
@@ -175,147 +197,402 @@
             const [salesGrowth, setSalesGrowth] = useState(0);
             const [seasonality, setSeasonality] = useState(Array(12).fill(1));
 
-            const results = useMemo(() => runFinancialEngine({
+            // Sincronización Firebase
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    if (window.fb) {
+                        clearInterval(interval);
+                        const { auth, db, methods } = window.fb;
+                        methods.onAuthStateChanged(auth, async (u) => {
+                            if (u) {
+                                setUser(u);
+                                const snap = await methods.getDoc(methods.doc(db, 'users', u.uid, 'config', 'master'));
+                                if (snap.exists()) {
+                                    const d = snap.data();
+                                    setInvestment(d.investment || 0); setProducts(d.products || []);
+                                    setStaff(d.staff || []); setFixedCosts(d.fixedCosts || []);
+                                    setAssets(d.assets || []); setInitialUnitsTotal(d.initialUnitsTotal || 0);
+                                    setSalesGrowth(d.salesGrowth || 0); setSeasonality(d.seasonality || Array(12).fill(1));
+                                }
+                            } else { methods.signInAnonymously(auth); }
+                            setLoading(false);
+                        });
+                    }
+                }, 500);
+                return () => clearInterval(interval);
+            }, []);
+
+            const save = async () => {
+                if (!user) return;
+                setSaveStatus('...');
+                await window.fb.methods.setDoc(window.fb.methods.doc(window.fb.db, 'users', user.uid, 'config', 'master'), {
+                    investment, products, staff, fixedCosts, assets, initialUnitsTotal, salesGrowth, seasonality
+                });
+                setSaveStatus('OK');
+                setTimeout(() => setSaveStatus(''), 2000);
+            };
+
+            const res = useMemo(() => runEngine({
                 investment, discountRate, inflationRate, taxRate, ivaRate, iibbRate, gatewayFee,
                 safetyStockMonths, collectionDays, cacCost, loanAmount, loanRate, loanTerm,
                 products, staff, fixedCosts, assets, initialUnitsTotal, salesGrowth, seasonality, scenario
             }), [investment, discountRate, inflationRate, taxRate, ivaRate, iibbRate, gatewayFee, safetyStockMonths, collectionDays, cacCost, loanAmount, loanRate, loanTerm, products, staff, fixedCosts, assets, initialUnitsTotal, salesGrowth, seasonality, scenario]);
 
-            const dailyUnits = Math.ceil((results.mFixedTotal / (results.avgPrice - results.avgCost || 1)) / 22);
-            const dscr = (results.totalEbitda / 12) / (loanAmount > 0 ? results.months[0].debtService : 1);
+            const dailyGoal = Math.ceil((res.mFixedTotal / (res.avgPrice - res.avgCost || 1)) / 22);
+            const dscr = (res.totalEbitda / 12) / (loanAmount > 0 ? res.months[0].debtSrv : 1);
 
-            const NavItem = ({ id, icon: Icon, label }) => (
-                <button onClick={()=>setActiveTab(id)} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
-                    <Icon size={18}/> {isSidebarOpen && <span className="text-sm font-bold">{label}</span>}
-                </button>
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-[#020617] text-indigo-500">
+                    <Icon name="Loader2" size={48} className="animate-spin mb-4" />
+                    <p className="font-bold animate-pulse">Iniciando Inteligencia Ejecutiva...</p>
+                </div>
             );
 
             return (
-                <div className="flex h-screen overflow-hidden">
+                <div className="flex h-screen overflow-hidden text-slate-200">
                     {/* SIDEBAR */}
-                    <aside className={`transition-all duration-300 bg-slate-900 border-r border-slate-800 p-4 flex flex-col ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
-                        <div className="flex items-center justify-between mb-8 px-2">
-                            {isSidebarOpen && <div className="flex items-center gap-2 font-black text-xl text-indigo-400"><Scale size={22}/> MASTER STRAT</div>}
+                    <aside className={`transition-all duration-300 bg-[#0f172a] border-r border-slate-800 p-4 flex flex-col ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+                        <div className="flex items-center justify-between mb-10 px-2">
+                            {isSidebarOpen && <div className="font-black text-xl text-indigo-400 tracking-tighter flex items-center gap-2"><Icon name="Scale" size={24}/> MASTER STRAT</div>}
                             <button onClick={()=>setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 mx-auto">
-                                {isSidebarOpen ? <ChevronLeft size={20}/> : <Menu size={20}/>}
+                                <Icon name={isSidebarOpen ? "ChevronLeft" : "Menu"} />
                             </button>
                         </div>
-                        <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar">
-                            <NavItem id="config" icon={Settings} label="Modelo Base"/>
-                            <NavItem id="strategy" icon={Zap} label="Impuestos/Caja"/>
-                            <NavItem id="products" icon={ShoppingCart} label="Catálogo"/>
-                            <NavItem id="staff" icon={Users} label="Nómina"/>
-                            <NavItem id="goals" icon={Target} label="Operativo"/>
-                            <NavItem id="flow" icon={Activity} label="Cash Flow"/>
-                            <NavItem id="analysis" icon={Gauge} label="Rentabilidad"/>
+                        <nav className="flex-1 space-y-1.5 overflow-y-auto custom-scrollbar">
+                            {[
+                                { id: 'config', icon: 'Settings', label: 'Inversión' },
+                                { id: 'strategy', icon: 'Zap', label: 'Estrategia' },
+                                { id: 'products', icon: 'ShoppingCart', label: 'Catálogo' },
+                                { id: 'staff', icon: 'Users', label: 'Nómina' },
+                                { id: 'goals', icon: 'Target', label: 'Operativo' },
+                                { id: 'flow', icon: 'Activity', label: 'Cash Flow' },
+                                { id: 'balance', icon: 'Briefcase', label: 'Balance' },
+                                { id: 'analysis', icon: 'Gauge', label: 'Rentabilidad' }
+                            ].map(item => (
+                                <button key={item.id} onClick={()=>setActiveTab(item.id)} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+                                    <Icon name={item.icon} size={18}/> {isSidebarOpen && <span className="text-sm font-bold">{item.label}</span>}
+                                </button>
+                            ))}
                         </nav>
-                        <div className="pt-4 border-t border-slate-800 space-y-4">
-                            {isSidebarOpen && <select value={scenario} onChange={e=>setScenario(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold outline-none cursor-pointer">
-                                <option value="base">🟢 Base</option>
-                                <option value="optimistic">🚀 Optimista</option>
-                                <option value="pessimistic">📉 Pesimista</option>
-                            </select>}
-                            <button className="w-full bg-indigo-600 py-3 rounded-2xl text-xs font-black shadow-lg flex items-center justify-center gap-2">
-                                <Save size={16}/> {isSidebarOpen && "GUARDAR"}
+                        <div className="pt-6 border-t border-slate-800 space-y-4">
+                            {isSidebarOpen && (
+                                <div className="px-2 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase">Escenario</label>
+                                    <select value={scenario} onChange={e=>setScenario(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold outline-none cursor-pointer">
+                                        <option value="base">🟢 Escenario Base</option>
+                                        <option value="optimistic">🚀 Optimista (+25%)</option>
+                                        <option value="pessimistic">📉 Pesimista (-25%)</option>
+                                    </select>
+                                </div>
+                            )}
+                            <button onClick={save} className="w-full bg-indigo-600 py-3 rounded-2xl text-xs font-black shadow-lg flex items-center justify-center gap-2 hover:bg-indigo-500 transition-all">
+                                <Icon name="Save" size={16}/> {isSidebarOpen && (saveStatus || "GUARDAR")}
                             </button>
                         </div>
                     </aside>
 
                     {/* MAIN */}
-                    <main className="flex-1 overflow-y-auto p-4 md:p-10 bg-[#020617]">
-                        {activeTab === 'config' && (
-                            <div className="max-w-5xl mx-auto space-y-8 animate-in">
-                                <h2 className="text-3xl font-black italic underline decoration-indigo-500">Parámetros de Inversión</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-slate-900 p-6 rounded-[32px] border border-slate-800 shadow-xl space-y-6">
-                                        <h3 className="text-indigo-400 font-black text-[10px] uppercase flex items-center gap-2"><DollarSign size={14}/> Capital</h3>
-                                        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Inversión Total ($)</label>
-                                            <input type="number" value={investment} onChange={e=>setInvestment(safe(e.target.value))} className="w-full bg-transparent border-none text-2xl font-mono outline-none" />
+                    <main className="flex-1 overflow-y-auto p-4 md:p-10 bg-[#020617] custom-scrollbar">
+                        <div className="max-w-6xl mx-auto space-y-12 tab-content">
+                            
+                            {activeTab === 'config' && (
+                                <div className="space-y-8">
+                                    <h2 className="text-3xl font-black italic underline decoration-indigo-500 underline-offset-8">Parámetros de Capital</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="bg-slate-900/50 p-6 rounded-[32px] border border-slate-800 shadow-xl space-y-6">
+                                            <h3 className="text-indigo-400 font-black text-[10px] uppercase flex items-center gap-2"><Icon name="DollarSign" size={14}/> Inversión <Info text="Monto total de activos fijos, depósitos y local." /></h3>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Monto Total ($)</label>
+                                                <input type="number" value={investment} onChange={e=>setInvestment(safe(e.target.value))} className="w-full bg-transparent border-none text-2xl font-mono outline-none text-white" />
+                                            </div>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Préstamo Bancario ($)</label>
+                                                <input type="number" value={loanAmount} onChange={e=>setLoanAmount(safe(e.target.value))} className="w-full bg-transparent border-none text-xl font-mono outline-none text-indigo-400" />
+                                            </div>
                                         </div>
-                                        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Préstamo ($)</label>
-                                            <input type="number" value={loanAmount} onChange={e=>setLoanAmount(safe(e.target.value))} className="w-full bg-transparent border-none text-xl font-mono outline-none text-indigo-400" />
+                                        <div className="bg-slate-900/50 p-6 rounded-[32px] border border-slate-800 shadow-xl space-y-6">
+                                            <h3 className="text-orange-400 font-black text-[10px] uppercase flex items-center gap-2"><Icon name="Thermometer" size={14}/> Macro</h3>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Inflación Mensual (%)</label>
+                                                <input type="number" value={inflationRate} onChange={e=>setInflationRate(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none text-white" />
+                                            </div>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Unid. Mes 1</label>
+                                                <input type="number" value={initialUnitsTotal} onChange={e=>setInitialUnitsTotal(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none text-emerald-400" />
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-900/50 p-6 rounded-[32px] border border-slate-800 shadow-xl space-y-4">
+                                            <div className="flex justify-between items-center font-black text-[10px] text-purple-400 uppercase tracking-widest">
+                                                <span>Gastos Fijos</span>
+                                                <button onClick={()=>setFixedCosts([...fixedCosts, {id: Date.now(), amount: 0}])} className="p-1 bg-purple-500/10 rounded-lg"><Icon name="Plus" size={16}/></button>
+                                            </div>
+                                            <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-2">
+                                                {fixedCosts.map(c => (
+                                                    <div key={c.id} className="flex gap-2 group bg-slate-950 p-2 rounded-xl border border-slate-800">
+                                                        <input placeholder="Luz, Gas..." className="flex-1 bg-transparent text-[10px] outline-none" value={c.concept} onChange={e=>setFixedCosts(fixedCosts.map(x=>x.id===c.id?{...x, concept: e.target.value}:x))} />
+                                                        <input type="number" className="w-16 bg-transparent text-[10px] font-mono text-right outline-none" value={c.amount} onChange={e=>setFixedCosts(fixedCosts.map(x=>x.id===c.id?{...x, amount: safe(e.target.value)}:x))} />
+                                                        <button onClick={()=>setFixedCosts(fixedCosts.filter(x=>x.id!==c.id))} className="text-slate-700 hover:text-red-500"><Icon name="Trash2" size={12}/></button>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="bg-slate-900 p-6 rounded-[32px] border border-slate-800 shadow-xl space-y-6">
-                                        <h3 className="text-orange-400 font-black text-[10px] uppercase flex items-center gap-2"><Thermometer size={14}/> Macro</h3>
-                                        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Inflación Mensual (%)</label>
-                                            <input type="number" value={inflationRate} onChange={e=>setInflationRate(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none" />
+                                    {/* SECCIÓN ACTIVOS */}
+                                    <div className="bg-slate-900/50 p-8 rounded-[40px] border border-slate-800">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h4 className="font-bold flex items-center gap-2 text-indigo-400"><Icon name="Briefcase"/> Activos y Amortización</h4>
+                                            <button onClick={()=>setAssets([...assets, {id: Date.now(), name: '', value: 0, life: 5}])} className="text-xs bg-indigo-600/10 px-4 py-2 rounded-full font-black">+ AÑADIR BIEN</button>
                                         </div>
-                                        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Ventas M1 (Unid.)</label>
-                                            <input type="number" value={initialUnitsTotal} onChange={e=>setInitialUnitsTotal(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none text-emerald-400" />
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-900 p-6 rounded-[32px] border border-slate-800 shadow-xl space-y-4">
-                                        <div className="flex justify-between items-center font-bold text-[10px] text-purple-400 uppercase tracking-widest">
-                                            <span>Gastos Fijos</span>
-                                            <button onClick={()=>setFixedCosts([...fixedCosts, {id: Date.now(), amount: 0}])} className="p-1 hover:bg-slate-800 rounded-lg"><Plus size={16}/></button>
-                                        </div>
-                                        <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar">
-                                            {fixedCosts.map(c => (
-                                                <div key={c.id} className="flex gap-2 group bg-slate-950 p-2 rounded-xl border border-slate-800">
-                                                    <input placeholder="Gasto" className="flex-1 bg-transparent text-[10px] outline-none" value={c.concept} onChange={e=>setFixedCosts(fixedCosts.map(x=>x.id===c.id?{...x, concept: e.target.value}:x))} />
-                                                    <input type="number" className="w-16 bg-transparent text-[10px] font-mono text-right outline-none" value={c.amount} onChange={e=>setFixedCosts(fixedCosts.map(x=>x.id===c.id?{...x, amount: safe(e.target.value)}:x))} />
-                                                    <button onClick={()=>setFixedCosts(fixedCosts.filter(x=>x.id!==c.id))} className="text-slate-700 hover:text-red-500"><Trash2 size={12}/></button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {assets.map(a => (
+                                                <div key={a.id} className="bg-slate-950 p-4 rounded-3xl border border-slate-800 relative group">
+                                                    <button onClick={()=>setAssets(assets.filter(x=>x.id!==a.id))} className="absolute top-2 right-2 text-slate-700 hover:text-red-500"><Icon name="Trash2" size={14}/></button>
+                                                    <input placeholder="Maquinaria, Rodado..." className="w-full bg-transparent font-bold text-sm mb-2 outline-none border-b border-white/5" value={a.name} onChange={e=>setAssets(assets.map(x=>x.id===a.id?{...x, name:e.target.value}:x))} />
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div><label className="text-[9px] text-slate-600 block uppercase font-bold">Valor ($)</label><input type="number" className="w-full bg-slate-900 rounded-lg p-1 text-xs" value={a.value} onChange={e=>setAssets(assets.map(x=>x.id===a.id?{...x, value:safe(e.target.value)}:x))} /></div>
+                                                        <div><label className="text-[9px] text-slate-600 block uppercase font-bold">Vida (Años)</label><input type="number" className="w-full bg-slate-900 rounded-lg p-1 text-xs" value={a.life} onChange={e=>setAssets(assets.map(x=>x.id===a.id?{...x, life:safe(e.target.value)}:x))} /></div>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {activeTab === 'goals' && (
-                            <div className="max-w-5xl mx-auto space-y-8 animate-in pb-20">
-                                <h2 className="text-3xl font-black italic underline decoration-indigo-500">Métricas de Control Diario</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <div className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Meta Diaria (Unid)</p>
-                                        <h3 className="text-5xl font-black text-indigo-400 font-mono">{dailyUnits}</h3>
-                                        <p className="text-[9px] text-slate-600 mt-2 font-black uppercase">Unidades hoy</p>
+                            {activeTab === 'strategy' && (
+                                <div className="max-w-4xl mx-auto space-y-10 animate-in">
+                                    <h2 className="text-3xl font-black italic border-l-4 border-emerald-500 pl-4">Estrategia Fiscal y Ciclo de Caja</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="glass p-8 rounded-[48px] space-y-6">
+                                            <h3 className="text-emerald-400 font-black text-[10px] uppercase flex gap-2"><Icon name="ShieldCheck"/> Impuestos e Intermediación</h3>
+                                            <div className="grid grid-cols-2 gap-6">
+                                                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                    <label className="text-[10px] text-slate-500 font-bold uppercase">IVA (%)</label>
+                                                    <input type="number" value={ivaRate} onChange={e=>setIvaRate(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none" />
+                                                </div>
+                                                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                    <label className="text-[10px] text-slate-500 font-bold uppercase">IIBB (%)</label>
+                                                    <input type="number" value={iibbRate} onChange={e=>setIibbRate(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none" />
+                                                </div>
+                                            </div>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase">Comisión Pasarelas (%) <Info text="Ej: Mercado Pago, Stripe o Tarjetas de Crédito." /></label>
+                                                <input type="number" value={gatewayFee} onChange={e=>setGatewayFee(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none text-red-400" />
+                                            </div>
+                                        </div>
+                                        <div className="glass p-8 rounded-[48px] space-y-6">
+                                            <h3 className="text-blue-400 font-black text-[10px] uppercase flex gap-2"><Icon name="Boxes"/> Logística de Caja</h3>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Stock de Seguridad (Meses)</label>
+                                                <input type="number" value={safetyStockMonths} onChange={e=>setSafetyStockMonths(safe(e.target.value))} className="w-full bg-transparent text-xl font-mono outline-none" />
+                                            </div>
+                                            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                                                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Ciclo de Cobro</label>
+                                                <select value={collectionDays} onChange={e=>setCollectionDays(safe(e.target.value))} className="w-full bg-transparent text-xl font-bold outline-none cursor-pointer text-indigo-400">
+                                                    <option value="0">🛒 Contado (Hoy)</option>
+                                                    <option value="30">💳 A 30 Días (Mes sgte)</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-2">DSCR Bancario</p>
-                                        <h3 className={`text-4xl font-black ${dscr >= 1.2 ? 'text-emerald-400' : 'text-red-400'} font-mono`}>{dscr.toFixed(2)}</h3>
-                                        <p className="text-[9px] text-slate-600 mt-2 font-black uppercase">Score cobertura</p>
-                                    </div>
-                                    <div className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Margen Unit.</p>
-                                        <h3 className="text-4xl font-black text-white font-mono">{formatUSD(results.avgPrice - results.avgCost)}</h3>
-                                        <p className="text-[9px] text-slate-600 mt-2 font-black uppercase">Ganancia x unidad</p>
-                                    </div>
-                                    <div className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl text-center">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Payback</p>
-                                        <h3 className="text-4xl font-black text-indigo-400 font-mono">{results.payback || 'N/A'}</h3>
-                                        <p className="text-[9px] text-slate-600 mt-2 font-black uppercase">Mes recupero</p>
+                                    {/* CURVA ESTACIONALIDAD */}
+                                    <div className="glass p-8 rounded-[48px]">
+                                        <h3 className="text-[10px] font-black uppercase text-slate-500 mb-6 flex gap-2 tracking-widest"><Icon name="TrendingUp" size={14}/> Curva de Demanda Mensual <Info text="1.0 = normal. 1.5 = +50%. Útil para navidad o temporadas bajas." /></h3>
+                                        <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
+                                            {seasonality.map((s, i) => (
+                                                <div key={i} className="text-center space-y-1">
+                                                    <label className="text-[8px] font-black text-slate-600 uppercase">M{i+1}</label>
+                                                    <input type="number" step="0.1" className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1 text-[10px] text-center font-mono" value={s} onChange={e=>{
+                                                        const n = [...seasonality];
+                                                        n[i] = safe(e.target.value);
+                                                        setSeasonality(n);
+                                                    }} />
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {activeTab === 'flow' && (
-                            <div className="max-w-6xl mx-auto animate-in pb-20 overflow-x-auto">
-                                <h2 className="text-3xl font-black italic mb-8">Flujo de Fondos (Caja)</h2>
-                                <div className="bg-slate-900 border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
-                                    <table className="w-full text-left text-xs">
-                                        <thead className="bg-slate-800/80 border-b border-slate-700 font-mono text-indigo-400">
-                                            <tr><th className="px-8 py-5 uppercase text-slate-500">Línea de Caja</th>{results.months.map((m, i) => <th key={i} className="px-4 py-5 text-right min-w-[110px]">{m.m}</th>)}</tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-800/50">
-                                            <tr><td className="px-8 py-4 font-bold text-slate-300">Ingresos Totales</td>{results.months.map((m, i) => <td key={i} className="px-4 py-4 text-right font-mono text-emerald-400">{formatUSD(m.rev)}</td>)}</tr>
-                                            <tr className="bg-indigo-500/5"><td className="px-8 py-4 font-black text-indigo-300 italic uppercase">EBITDA</td>{results.months.map((m, i) => <td key={i} className="px-4 py-4 text-right font-mono font-bold text-indigo-300">{formatUSD(m.ebitda)}</td>)}</tr>
-                                            <tr className="bg-slate-950 font-black"><td className="px-8 py-6 text-white text-sm">CASH FLOW NETO</td>{results.months.map((m, i) => <td key={i} className="px-4 py-6 text-right font-mono text-lg text-blue-400">{formatUSD(m.cf)}</td>)}</tr>
-                                        </tbody>
-                                    </table>
+                            {activeTab === 'products' && (
+                                <div className="space-y-8 animate-in pb-20">
+                                    <div className="flex justify-between items-end">
+                                        <h2 className="text-3xl font-black italic border-l-4 border-indigo-500 pl-4">Catálogo de Productos</h2>
+                                        <button onClick={()=>setProducts([...products, {id: Date.now(), name: 'Nuevo', cost: 0, margin: 35}])} className="bg-indigo-600 px-6 py-3 rounded-2xl font-black text-xs shadow-lg shadow-indigo-600/20">+ AGREGAR PRODUCTO</button>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {products.map(p => (
+                                            <div key={p.id} className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl group hover:border-indigo-500/30 transition-all">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <div className="flex items-center gap-3"><Icon name="ShoppingCart" className="text-indigo-400"/><input className="bg-transparent font-black text-xl outline-none" value={p.name} onChange={e=>setProducts(products.map(x=>x.id===p.id?{...x, name:e.target.value}:x))} /></div>
+                                                    <button onClick={()=>setProducts(products.filter(x=>x.id!==p.id))} className="text-slate-700 hover:text-red-500 transition-colors"><Icon name="Trash2" /></button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800"><label className="text-[9px] text-slate-500 block font-bold uppercase">Costo Unitario ($)</label><input type="number" className="w-full bg-transparent font-mono outline-none text-base mt-1" value={p.cost} onChange={e=>setProducts(products.map(x=>x.id===p.id?{...x, cost:safe(e.target.value)}:x))} /></div>
+                                                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800"><label className="text-[9px] text-slate-500 block font-bold uppercase">Margen Deseado (%)</label><input type="number" className="w-full bg-transparent font-mono outline-none text-base mt-1 text-emerald-400" value={p.margin} onChange={e=>setProducts(products.map(x=>x.id===p.id?{...x, margin:safe(e.target.value)}:x))} /></div>
+                                                </div>
+                                                <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">PVP Sugerido:</span>
+                                                    <span className="text-2xl font-black text-white font-mono">{fmt(safe(p.cost)*(1+safe(p.margin)/100))}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* RENDER RESTO DE TABS (Omitidos para brevedad, misma lógica estructural) */}
-                        <div className="mt-20 text-center opacity-20 text-[10px] font-bold uppercase tracking-widest italic">Biz Strategist Executive Edition v10.0</div>
+                            {activeTab === 'staff' && (
+                                <div className="space-y-10 animate-in pb-20">
+                                    <div className="flex justify-between items-end">
+                                        <h2 className="text-3xl font-black italic border-l-4 border-indigo-500 pl-4">Gestión de Nómina</h2>
+                                        <button onClick={()=>setStaff([...staff, {id: Date.now(), role: 'Nuevo', basic: 0, additional: 0, employerTaxesRate: 25}])} className="bg-indigo-600 px-6 py-3 rounded-2xl font-black text-xs shadow-lg">+ AGREGAR STAFF</button>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {staff.map(s => (
+                                            <div key={s.id} className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 shadow-2xl">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <div className="flex items-center gap-3"><Icon name="ReceiptText" className="text-indigo-400"/><input className="bg-transparent font-black text-lg outline-none" value={s.role} onChange={e=>setStaff(staff.map(x=>x.id===s.id?{...x, role:e.target.value}:x))} /></div>
+                                                    <button onClick={()=>setStaff(staff.filter(x=>x.id!==s.id))} className="text-slate-700 hover:text-red-500"><Icon name="Trash2" /></button>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center"><label className="text-[9px] text-slate-500 block uppercase font-bold">Básico</label><input type="number" className="w-full bg-transparent font-mono outline-none text-xs text-center" value={s.basic} onChange={e=>setStaff(staff.map(x=>x.id===s.id?{...x, basic:safe(e.target.value)}:x))} /></div>
+                                                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center"><label className="text-[9px] text-slate-500 block uppercase font-bold">Adic.</label><input type="number" className="w-full bg-transparent font-mono outline-none text-xs text-center" value={s.additional} onChange={e=>setStaff(staff.map(x=>x.id===s.id?{...x, additional:safe(e.target.value)}:x))} /></div>
+                                                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center"><label className="text-[9px] text-slate-500 block uppercase font-bold">Patron %</label><input type="number" className="w-full bg-transparent font-mono outline-none text-xs text-center" value={s.employerTaxesRate} onChange={e=>setStaff(staff.map(x=>x.id===s.id?{...x, employerTaxesRate:safe(e.target.value)}:x))} /></div>
+                                                </div>
+                                                <div className="mt-6 bg-indigo-600/5 p-4 rounded-3xl border border-indigo-600/10 flex justify-between items-center">
+                                                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-tighter">Costo Total Empresa:</span>
+                                                    <span className="text-xl font-black text-white font-mono">{fmt((safe(s.basic)+safe(s.additional))*(1+safe(s.employerTaxesRate)/100))}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'goals' && (
+                                <div className="space-y-10 animate-in pb-20">
+                                    <h2 className="text-3xl font-black italic border-l-4 border-indigo-500 pl-4">Centro de Control Operativo</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                        <div className="glass p-10 rounded-[48px] text-center shadow-2xl">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Meta Diaria (Unid)</p>
+                                            <h3 className="text-6xl font-black text-indigo-400 font-mono">{dailyGoal}</h3>
+                                            <p className="text-[9px] text-slate-600 mt-2 font-black uppercase">Unidades a vender hoy</p>
+                                        </div>
+                                        <div className="glass p-10 rounded-[48px] text-center shadow-2xl">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Caja Diaria Eq.</p>
+                                            <h3 className="text-3xl font-black text-white font-mono">{fmt(dailyGoal * res.avgPrice)}</h3>
+                                            <p className="text-[9px] text-slate-600 mt-2 font-black uppercase">Ingreso mínimo diario</p>
+                                        </div>
+                                        <div className="glass p-10 rounded-[48px] text-center shadow-2xl">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Bancabilidad (DSCR)</p>
+                                            <h3 className={`text-5xl font-black ${dscr >= 1.2 ? 'text-emerald-400' : 'text-red-400'} font-mono`}>{dscr.toFixed(2)}</h3>
+                                            <p className="text-[9px] text-slate-600 mt-2 font-black uppercase tracking-tighter">Score cobertura deuda</p>
+                                        </div>
+                                        <div className="glass p-10 rounded-[48px] text-center shadow-2xl">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Eq. Crítico (Mensual)</p>
+                                            <h3 className="text-4xl font-black text-white font-mono">{Math.ceil(res.mFixedTotal / (res.avgPrice - res.avgCost || 1))}</h3>
+                                            <p className="text-[9px] text-slate-600 mt-2 font-black uppercase tracking-tighter">Ventas para beneficio cero</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-indigo-600/10 p-10 rounded-[60px] border border-indigo-600/20 flex flex-col md:flex-row gap-10 items-center shadow-2xl">
+                                        <div className="w-24 h-24 bg-indigo-600 rounded-full flex items-center justify-center shadow-indigo-600/40 shadow-2xl"><Icon name="CheckCircle2" size={48} className="text-white"/></div>
+                                        <div className="flex-1 space-y-4">
+                                            <h4 className="text-2xl font-black text-white uppercase tracking-tighter italic">Dictamen de Estrategia Financiera</h4>
+                                            <p className="text-slate-400 text-base italic leading-relaxed">
+                                                {dscr >= 1.2 ? "Excelente Solvencia: El flujo operativo mensual es capaz de absorber el pago de intereses y capital sobrando caja para reinversión. El proyecto es altamente escalable y atractivo para financiamiento bancario." : "Riesgo de Liquidez Detectado: Los márgenes actuales apenas cubren el servicio de deuda. Se recomienda revisar el CAC o aumentar la inversión de capital propio para reducir las cuotas mensuales."}
+                                                <br/><br/>
+                                                <span className="text-indigo-400 font-bold">Meta Crítica:</span> Debes asegurar un ticket promedio diario de {fmt(dailyGoal * res.avgPrice)} para no comprometer el Patrimonio Neto.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'flow' && (
+                                <div className="space-y-10 animate-in pb-20">
+                                    <h2 className="text-3xl font-black italic border-l-4 border-blue-500 pl-4">Estado de Resultados y Caja (Directo)</h2>
+                                    <div className="bg-[#0f172a] border border-slate-800 rounded-[40px] overflow-hidden shadow-2xl overflow-x-auto custom-scrollbar">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-slate-800/80 border-b border-slate-700">
+                                                <tr><th className="px-8 py-6 font-black uppercase text-slate-500">CONCEPTO ECONÓMICO</th>{res.months.map((p, i) => <th key={i} className="px-6 py-6 text-right font-mono text-indigo-400 min-w-[120px]">{p.m}</th>)}</tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800/40">
+                                                <tr className="hover:bg-white/5 transition-colors"><td className="px-8 py-5 font-bold text-slate-300">Ingresos Totales (Venta Bruta)</td>{res.months.map((p, i) => <td key={i} className="px-6 py-5 text-right font-mono text-emerald-400">{fmt(p.rev)}</td>)}</tr>
+                                                <tr className="bg-indigo-500/5 transition-colors"><td className="px-8 py-5 font-black text-indigo-400 uppercase tracking-widest text-[10px]">EBITDA (Resultado Operativo)</td>{res.months.map((p, i) => <td key={i} className="px-6 py-5 text-right font-mono font-bold text-indigo-300">{fmt(p.ebitda)}</td>)}</tr>
+                                                <tr><td className="px-8 py-5 text-slate-500 pl-12 italic">(-) Intereses + Impuestos</td>{res.months.map((p, i) => <td key={i} className="px-6 py-5 text-right font-mono">({fmt(p.ebitda - p.net)})</td>)}</tr>
+                                                <tr className="bg-slate-950 font-black"><td className="px-8 py-8 text-white text-base flex items-center gap-3">FLUJO NETO (CAJA FINAL) <Icon name="ArrowUpRight" className="text-blue-500"/></td>{res.months.map((p, i) => <td key={i} className="px-6 py-8 text-right font-mono text-xl text-blue-400 tracking-tighter">{fmt(p.cf)}</td>)}</tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'balance' && (
+                                <div className="space-y-10 animate-in pb-20">
+                                    <h2 className="text-3xl font-black italic border-l-4 border-indigo-400 pl-4">Evolución de Situación Patrimonial</h2>
+                                    <div className="bg-[#0f172a] border border-slate-800 rounded-[40px] overflow-hidden shadow-2xl overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-indigo-900/10 border-b border-slate-700">
+                                                <tr><th className="px-8 py-6 font-black uppercase text-indigo-400">RUBROS AL FINAL DEL MES</th>{res.months.map((m, i) => <th key={i} className="px-6 py-6 text-right font-mono text-slate-500 min-w-[110px]">{m.m}</th>)}</tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800/40">
+                                                <tr className="bg-slate-900/50"><td className="px-8 py-4 font-bold text-slate-300">ACTIVO TOTAL (Caja + Stock + Fijo)</td>{res.months.map((m, i) => <td key={i} className="px-6 py-4 text-right font-mono text-white font-bold">{fmt(m.assets.cash + m.assets.inv + m.assets.fixed)}</td>)}</tr>
+                                                <tr className="bg-red-950/10"><td className="px-8 py-4 font-bold text-red-400 uppercase tracking-widest text-[10px]">PASIVO TOTAL (Deuda Pendiente)</td>{res.months.map((m, i) => <td key={i} className="px-6 py-4 text-right font-mono text-red-300">{fmt(m.debt)}</td>)}</tr>
+                                                <tr className="bg-indigo-600/10 font-black"><td className="px-8 py-6 text-indigo-400 text-sm italic uppercase tracking-tighter">PATRIMONIO NETO REAL</td>{res.months.map((m, i) => <td key={i} className="px-6 py-6 text-right font-mono text-white text-lg tracking-tighter">{fmt(m.equity)}</td>)}</tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'analysis' && (
+                                <div className="space-y-12 animate-in pb-20">
+                                    <h2 className="text-3xl font-black italic border-l-4 border-indigo-500 pl-4">Dashboard de Alta Rentabilidad</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        <div className="glass p-10 rounded-[60px] flex flex-col items-center">
+                                            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-10 italic">Evaluación Multidimensional</h4>
+                                            <div className="h-[380px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                                                        { s: 'Margen EBITDA', v: Math.min(100, (res.totalEbitda/res.totalRev)*200) || 0 },
+                                                        { s: 'VAN/TIR Est.', v: res.van > 0 ? 95 : 20 },
+                                                        { s: 'Bancabilidad', v: Math.min(100, dscr * 50) || 0 },
+                                                        { s: 'Escalabilidad', v: Math.min(100, salesGrowth*5) || 0 },
+                                                        { s: 'Liquidez/Payback', v: (12 - (res.payback || 12)) * 8.3 }
+                                                    ]}>
+                                                        <PolarGrid stroke="#334155" />
+                                                        <PolarAngleAxis dataKey="s" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '900' }} />
+                                                        <Radar name="Biz" dataKey="v" stroke="#6366f1" fill="#6366f1" fillOpacity={0.6} />
+                                                    </RadarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-8 flex flex-col justify-center">
+                                            <div className="bg-slate-900 p-10 rounded-[48px] border-2 border-indigo-500/20 shadow-2xl relative overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950/20 group">
+                                                <Icon name="DollarSign" size={100} className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"/>
+                                                <p className="text-xs font-black text-indigo-400 uppercase mb-2 tracking-widest">Valor Actual Neto (VAN)</p>
+                                                <h3 className={`text-6xl font-black ${res.van >= 0 ? 'text-white' : 'text-red-400'} font-mono tracking-tighter`}>{fmt(res.van)}</h3>
+                                                <p className="text-[10px] text-slate-500 mt-6 font-bold italic leading-relaxed italic">Proyección del valor del negocio descontado hoy más valor terminal del ejercicio.</p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-6">
+                                                <div className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 text-center shadow-xl">
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Recupero (Payback)</p>
+                                                    <h4 className="text-4xl font-black text-white font-mono">{res.payback || 'N/A'} M.</h4>
+                                                </div>
+                                                <div className="bg-slate-900 p-8 rounded-[40px] border border-slate-800 text-center shadow-xl">
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Valuación Llave</p>
+                                                    <h4 className="text-3xl font-black text-emerald-400 font-mono">{fmt(res.totalEbitda * 3)}</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-20 py-20 border-t border-slate-900 text-center">
+                                <p className="text-[10px] font-black text-slate-700 uppercase tracking-[1em] italic">Biz Strategist Supreme Mastery v10.0</p>
+                            </div>
+                        </div>
                     </main>
                 </div>
             );
